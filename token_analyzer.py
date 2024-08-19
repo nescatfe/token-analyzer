@@ -163,7 +163,7 @@ def scan_all_favorites(favorites):
         display_favorite_token_summary(address, name, pair_data)
 
 def main():
-    console.print("[bold green]Welcome to the Enhanced Crypto Token Analyzer![/bold green]")
+    console.print("[bold green]Welcome to the  Crypto Token Analyzer![/bold green]")
     console.print("This tool fetches and displays information about cryptocurrency tokens across various networks.")
     
     favorites = load_favorites()
@@ -209,26 +209,54 @@ def main():
             display_favorites(favorites)
             if favorites:
                 console.print("\n[bold cyan]Favorite Token Options:[/bold cyan]")
-                console.print("Enter the number of a favorite token to analyze")
-                console.print("Or enter 'scan' to scan all favorite tokens")
-                console.print("Or press Enter to return to the main menu")
+                console.print("1. Enter the number of a favorite token to analyze")
+                console.print("2. Scan all favorite tokens")
+                console.print("3. Remove a favorite token by number")
+                console.print("4. Remove all favorite tokens")
+                console.print("5. Return to the main menu")
                 
-                fav_choice = Prompt.ask("Enter your choice")
+                fav_choice = Prompt.ask("Enter your choice", choices=["1", "2", "3", "4", "5"])
                 
-                if fav_choice.lower() == 'scan':
-                    scan_all_favorites(favorites)
-                elif fav_choice.isdigit():
-                    index = int(fav_choice) - 1
-                    if 0 <= index < len(favorites):
-                        address = list(favorites.keys())[index]
-                        token_data, pair_data = scan_favorite_token(address)
-                        if token_data and pair_data:
-                            display_token_info(token_data, pair_data)
-                            display_pair_info(pair_data)
+                if fav_choice == "1":
+                    token_number = Prompt.ask("Enter the number of the favorite token to analyze")
+                    if token_number.isdigit():
+                        index = int(token_number) - 1
+                        if 0 <= index < len(favorites):
+                            address = list(favorites.keys())[index]
+                            token_data, pair_data = scan_favorite_token(address)
+                            if token_data and pair_data:
+                                display_token_info(token_data, pair_data)
+                                display_pair_info(pair_data)
+                            else:
+                                console.print("[bold red]Failed to fetch data for the selected token.[/bold red]")
                         else:
-                            console.print("[bold red]Failed to fetch data for the selected token.[/bold red]")
+                            console.print("[bold red]Invalid token number.[/bold red]")
                     else:
-                        console.print("[bold red]Invalid token number.[/bold red]")
+                        console.print("[bold red]Invalid input. Please enter a number.[/bold red]")
+                
+                elif fav_choice == "2":
+                    scan_all_favorites(favorites)
+                
+                elif fav_choice == "3":
+                    token_number = Prompt.ask("Enter the number of the favorite token to remove")
+                    if token_number.isdigit():
+                        index = int(token_number) - 1
+                        if 0 <= index < len(favorites):
+                            address = list(favorites.keys())[index]
+                            remove_from_favorites(favorites, address)
+                        else:
+                            console.print("[bold red]Invalid token number.[/bold red]")
+                    else:
+                        console.print("[bold red]Invalid input. Please enter a number.[/bold red]")
+                
+                elif fav_choice == "4":
+                    if Prompt.ask("Are you sure you want to remove all favorites?", choices=["y", "n"], default="n") == "y":
+                        favorites.clear()
+                        save_favorites(favorites)
+                        console.print("[bold yellow]All favorites have been removed.[/bold yellow]")
+                
+                elif fav_choice == "5":
+                    pass  # Return to main menu
         
         elif choice == "3":
             scan_all_favorites(favorites)
@@ -236,7 +264,7 @@ def main():
         elif choice == "4":
             break
     
-    console.print("[bold green]Thank you for using the Enhanced Crypto Token Analyzer![/bold green]")
+    console.print("[bold green]Thank you for using the Crypto Token Analyzer![/bold green]")
 
 if __name__ == "__main__":
     main()
