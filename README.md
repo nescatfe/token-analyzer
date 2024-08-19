@@ -10,68 +10,92 @@
 
 ## Description
 
-The Crypto Token Analyzer is a powerful command-line tool designed for cryptocurrency enthusiasts and traders. It provides real-time analysis of token data across various blockchain networks, leveraging the DexScreener API to fetch comprehensive information about cryptocurrency tokens and trading pairs.
+The Crypto Token Analyzer is a powerful command-line tool designed to fetch and display information about cryptocurrency tokens across various networks. It provides real-time data analysis, wallet tracking, and market insights for crypto enthusiasts, traders, and researchers.
 
-Key features include:
-- Real-time token analysis
-- Favorite token management
-- Batch scanning of favorite tokens
-- Detailed metrics display including price, liquidity, volume, and transaction data
-- User-friendly interface with rich text formatting
+## Features
+
+- **Token Analysis**: Analyze any token by its contract address, providing detailed information about price, liquidity, volume, and more.
+- **Favorite Tokens**: Save and manage a list of favorite tokens for quick access and monitoring.
+- **Wallet Analysis**: Track and analyze cryptocurrency wallets across different blockchains (Ethereum, Binance Smart Chain).
+- **Top Cryptocurrencies**: View the top 10 cryptocurrencies by market cap with real-time data.
+- **Real-time BTC and ETH Prices**: Display current Bitcoin and Ethereum prices in the main menu.
+- **Multi-chain Support**: Supports Ethereum, Binance Smart Chain, and Solana networks.
 
 ## Installation
 
-### Prerequisites
+1. Ensure you have Python 3.7 or later installed on your system.
 
-- Python 3.7 or higher
-- pip (Python package installer)
+2. Clone this repository:
+```
+git clone https://github.com/nescatfe/token-analyzer.git
+```
 
-### Steps
+3. Navigate to the project directory:
+```
+cd crypto-token-analyzer
+```
 
-1. Clone the repository:
-   ```
-   git clone https://github.com/nescatfe/token-analyzer.git
-   cd token-analyzer
-   ```
+4. Install the required dependencies:
+```
+pip install -r requirements.txt
+```
 
-2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+## Dependencies
+
+This project relies on the following Python packages:
+
+- requests
+- web3
+- rich
+- pyperclip
+
+These dependencies are listed in the `requirements.txt` file and will be installed when you follow the installation instructions above.
 
 ## Usage
 
-Run the script from the command line:
+Run the application by executing:
 
 ```
 python token_analyzer.py
 ```
 
-Follow the on-screen prompts to:
-1. Analyze individual tokens
-2. Manage your favorite tokens
-3. Scan all your favorite tokens for quick updates
+Follow the on-screen prompts to navigate through different features:
 
-## Features
+1. Analyze a token
+2. View favorites
+3. Scan all favorite tokens
+4. Analyze Wallets
+5. View Top 10 Cryptocurrencies
 
-- **Token Analysis**: Enter any token address to get detailed information including price, liquidity, volume, and recent transactions.
-- **Favorite Management**: Save tokens to your favorites list for quick access and batch scanning.
-- **Batch Scanning**: Quickly scan all your favorite tokens to get an overview of their current status.
-- **Rich Display**: Utilizes the `rich` library for a visually appealing and easy-to-read command-line interface.
+## API Keys
 
-## Contributing
+This application uses various APIs to fetch cryptocurrency data. You'll need to obtain API keys from the following services and add them to the script:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+- Etherscan: https://etherscan.io/apis
+- BscScan: https://bscscan.com/apis
+- Infura (for Ethereum provider): https://infura.io/
+
+Replace the placeholder API keys in the script with your own:
+
+```python
+ETHERSCAN_KEY = "YOUR_ETHERSCAN_API_KEY"
+BSCSCAN_KEY = "YOUR_BSCSCAN_API_KEY"
+ETH_PROVIDER = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+```
+
+## Configuration
+
+The application stores favorite tokens and wallets in JSON files:
+
+- `favorite_tokens.json`: Stores your favorite token addresses and names.
+- `favorite_wallets.json`: Stores your favorite wallet addresses and their associated chains.
+
+These files will be created automatically when you add favorites through the application.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is [MIT](https://github.com/nescatfe/token-analyzer/blob/main/LICENSE) licensed.
 
 ## Disclaimer
 
-This tool is for informational purposes only. Always conduct your own research before making any investment decisions.
-
-## Acknowledgments
-
-- [DexScreener API](https://docs.dexscreener.com/api/reference) for providing the token data
-- [Rich library](https://github.com/Textualize/rich) for the beautiful command-line interface
+This tool is for informational purposes only. It is not financial advice. Always do your own research before making any investment decisions. The developers of this tool are not responsible for any financial losses incurred through the use of this software.
