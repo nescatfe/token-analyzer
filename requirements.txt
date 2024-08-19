@@ -1,2 +1,4 @@
-requests==2.31.0
-rich==13.5.2
+requests==2.26.0
+web3==5.24.0
+rich==10.12.0
+pyperclip==1.8.2
