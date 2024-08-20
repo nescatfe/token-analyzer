@@ -1,43 +1,35 @@
 import requests
 import json
 import os
+import sys
 import time
 import pyperclip
-
 from rich import print
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.prompt import Prompt
 from rich.progress import Progress
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from web3 import Web3
 
+# Load ABIs
+with open('erc20_abi.json') as f:
+    ERC20_ABI = json.load(f)
+with open('router_abi.json') as f:
+    ROUTER_ABI = json.load(f)
+    
 console = Console()
-
-
-# ABI for ERC20 Token and Uniswap/PancakeSwap Router
-ERC20_ABI = json.loads('[{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"type":"function"},{"constant":false,"inputs":[{"name":"_to","type":"address"},{"name":"_value","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"type":"function"}]')
-ROUTER_ABI = json.loads('[{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"uint256","name":"amountInMax","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapTokensForExactTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactETHForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapETHForExactTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForETH","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"uint256","name":"amountInMax","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapTokensForExactETH","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"}]')
-
-# Router addresses
+ETH_PROVIDER = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
+BSC_PROVIDER = "https://bsc-dataseed.binance.org/"
 UNISWAP_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 PANCAKESWAP_ROUTER = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
-BSC_PROVIDER = "https://bsc-dataseed.binance.org/"
-
-# API endpoints and keys (you should replace these with actual API keys)
 ETHERSCAN_API = "https://api.etherscan.io/api"
 BSCSCAN_API = "https://api.bscscan.com/api"
 SOLSCAN_API = "https://public-api.solscan.io/account/transactions"
-
-# Replace the placeholder API keys in the script with your own
 ETHERSCAN_KEY = "YOUR_ETHERSCAN_API_KEY"
 BSCSCAN_KEY = "YOUR_BSCSCAN_API_KEY"
-ETH_PROVIDER = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
-
-
-# File to store favorite tokens
 FAVORITES_FILE = "favorite_tokens.json"
 WALLET_FAVORITES_FILE = "favorite_wallets.json"
 
@@ -46,32 +38,105 @@ def display_ascii_art():
 [bold cyan]
 ╔╦╗┌─┐┬┌─┌─┐┌┐┌  ╔═╗┌┐┌┌─┐┬ ┬ ┬┌─┐┌─┐┬─┐
  ║ │ │├┴┐├┤ │││  ╠═╣│││├─┤│ └┬┘┌─┘├┤ ├┬┘
- ╩ └─┘┴ ┴└─┘┘└┘  ╩ ╩┘└┘┴ ┴┴─┘┴ └─┘└─┘┴└─ v.1.2
+ ╩ └─┘┴ ┴└─┘┘└┘  ╩ ╩┘└┘┴ ┴┴─┘┴ └─┘└─┘┴└─ v.1.3
 by Malvidous | github/nescatfe
 [/bold cyan]
     """
     print(ascii_art)
+
+#----- NEW FUNCTION HERE -----#
+
+import requests
+from rich.table import Table
+from rich.panel import Panel
+from rich.console import Console
+from datetime import datetime
+
+console = Console()
+
+def fetch_eth_gas_prices():
+    etherscan_url = f"{ETHERSCAN_API}?module=gastracker&action=gasoracle&apikey={ETHERSCAN_KEY}"
     
+    try:
+        response = requests.get(etherscan_url)
+        response.raise_for_status()
+        data = response.json()
+        return data["result"]
+    except requests.RequestException as e:
+        console.print(f"[bold red]Error fetching ETH gas prices: {e}[/bold red]")
+        return None
+    
+def display_eth_gas_prices():
+    data = fetch_eth_gas_prices()
+    
+    if data:
+        # Gas Price Table
+        gas_table = Table(title="Ethereum Gas Prices (Gwei)")
+        gas_table.add_column("Priority", style="cyan")
+        gas_table.add_column("Gas Price", style="yellow")
+        gas_table.add_column("Estimated Time", style="magenta")
+        
+        gas_table.add_row("Low", data['SafeGasPrice'], "< 15 minutes")
+        gas_table.add_row("Standard", data['ProposeGasPrice'], "< 5 minutes")
+        gas_table.add_row("Fast", data['FastGasPrice'], "< 1 minute")
+        
+        console.print(gas_table)
+        
+        # Additional Information
+        info_table = Table(show_header=False, box=None)
+        info_table.add_row("Base Fee:", f"[yellow]{data['suggestBaseFee']} Gwei[/yellow]")
+        info_table.add_row("Last Block:", f"[green]{data['LastBlock']}[/green]")
+        
+        now = datetime.now()
+        info_table.add_row("Last Updated:", f"[magenta]{now.strftime('%Y-%m-%d %H:%M:%S')}[/magenta]")
+        
+        console.print(Panel(info_table, title="Additional Information", expand=False))
+        
+        # Gas Price Recommendations
+        console.print("\n[bold cyan]Gas Price Recommendations:[/bold cyan]")
+        console.print(f"• For non-urgent transactions, consider using [green]{data['SafeGasPrice']} Gwei[/green]")
+        console.print(f"• For faster confirmations, use [yellow]{data['ProposeGasPrice']} Gwei[/yellow]")
+        console.print(f"• For priority transactions, use [red]{data['FastGasPrice']} Gwei[/red] or higher")
+        
+        # Historical comparison
+        if 'LastBlock' in data and 'suggestBaseFee' in data:
+            blocks_per_day = 24 * 60 * 60 / 12  # Approximate number of blocks per day
+            estimated_daily_base_fee = float(data['suggestBaseFee']) * blocks_per_day
+            console.print(f"\n[bold yellow]Estimated daily base fee burn:[/bold yellow] {estimated_daily_base_fee:.2f} ETH")
+            
+        # Gas price volatility warning
+        console.print("\n[bold red]Note:[/bold red] Gas prices can be highly volatile. Always check current prices before sending a transaction.")
+        
+    else:
+        console.print("[bold red]Failed to fetch Ethereum gas prices.[/bold red]")
+
+def clear_screen():
+    if sys.platform.startswith('win'):
+        os.system('cls') 
+    else:
+        os.system('clear')  
+        
+def save_favorite_wallets(favorites):
+    with open(WALLET_FAVORITES_FILE, 'w') as f:
+        json.dump(favorites, f)
+        
 def load_favorite_wallets():
     if os.path.exists(WALLET_FAVORITES_FILE):
         with open(WALLET_FAVORITES_FILE, 'r') as f:
             return json.load(f)
     return {}
-
-def save_favorite_wallets(favorites):
-    with open(WALLET_FAVORITES_FILE, 'w') as f:
-        json.dump(favorites, f)
         
 def add_to_favorite_wallets(favorites, address, chain):
-    favorites[address] = chain
+    nickname = Prompt.ask("Enter a nickname for this wallet (optional)", default="")
+    favorites[address] = {'chain': chain, 'nickname': nickname}
     save_favorite_wallets(favorites)
-    console.print(f"[bold green]Added {address} ({chain}) to favorite wallets![/bold green]")
+    console.print(f"[bold green]Added {address} ({chain}) to favorite wallets with nickname: {nickname or 'N/A'}![/bold green]")
     
 def remove_from_favorite_wallets(favorites, address):
     if address in favorites:
-        chain = favorites.pop(address)
+        data = favorites.pop(address)
         save_favorite_wallets(favorites)
-        console.print(f"[bold yellow]Removed {address} ({chain}) from favorite wallets.[/bold yellow]")
+        console.print(f"[bold yellow]Removed {address} ({data['chain']}) from favorite wallets.[/bold yellow]")
     else:
         console.print("[bold red]Wallet address not found in favorites.[/bold red]")
         
@@ -84,9 +149,12 @@ def display_favorite_wallets(favorites):
     table.add_column("#", style="cyan")
     table.add_column("Address", style="cyan")
     table.add_column("Chain", style="magenta")
+    table.add_column("Nickname", style="green")
     
-    for i, (address, chain) in enumerate(favorites.items(), 1):
-        table.add_row(str(i), address, chain)
+    for i, (address, data) in enumerate(favorites.items(), 1):
+        chain = data['chain']
+        nickname = data.get('nickname', 'N/A')  # Use 'N/A' if no nickname is set
+        table.add_row(str(i), address, chain, nickname)
         
     console.print(table)
     
@@ -134,113 +202,9 @@ def get_wallet_balance(address, chain):
     if data["status"] == "1":
         return float(data["result"]) / 1e18
     return None
-
-def get_solana_balance(address):
-    api_url = f"https://public-api.solscan.io/account/{address}"
-    response = requests.get(api_url)
-    if response.status_code == 200:
-        data = response.json()
-        return float(data["lamports"]) / 1e9
-    return None
-
-def categorize_transaction(tx, chain):
-    w3 = Web3(Web3.HTTPProvider(ETH_PROVIDER if chain == "eth" else BSC_PROVIDER))
-    
-    if tx['to'].lower() == (UNISWAP_ROUTER if chain == "eth" else PANCAKESWAP_ROUTER).lower():
-        router_contract = w3.eth.contract(address=w3.to_checksum_address(tx['to']), abi=ROUTER_ABI)
-        try:
-            decoded_input = router_contract.decode_function_input(tx['input'])
-            func_name = decoded_input[0].fn_name
-            func_params = decoded_input[1]
-            
-            if func_name in ['swapExactTokensForTokens', 'swapTokensForExactTokens', 'swapExactETHForTokens', 'swapETHForExactTokens', 'swapExactTokensForETH', 'swapTokensForExactETH']:
-                token_path = func_params['path']
-                token_in = get_token_info(w3, token_path[0]) if 'ETH' not in func_name.split('For')[0] else {'symbol': 'ETH' if chain == 'eth' else 'BNB'}
-                token_out = get_token_info(w3, token_path[-1]) if 'ETH' not in func_name.split('For')[1] else {'symbol': 'ETH' if chain == 'eth' else 'BNB'}
-                
-                return f"Swapping {token_in['symbol']} for {token_out['symbol']}"
-            
-        except Exception as e:
-            pass
-            
-    # Check for ERC20 token transfers
-    try:
-        token_contract = w3.eth.contract(address=w3.to_checksum_address(tx['to']), abi=ERC20_ABI)
-        decoded_input = token_contract.decode_function_input(tx['input'])
-        func_name = decoded_input[0].fn_name
-        func_params = decoded_input[1]
-        
-        if func_name == 'transfer':
-            token_info = get_token_info(w3, tx['to'])
-            amount = func_params['_value'] / (10 ** token_info['decimals'])
-            return f"Transferring {amount:.4f} {token_info['symbol']}"
-    except Exception as e:
-        pass
-        
-    if tx['input'] != "0x":
-        return "Contract Interaction"
-    elif float(tx['value']) > 0:
-        return f"Sending {float(tx['value']) / 1e18:.4f} {'ETH' if chain == 'eth' else 'BNB'}"
-    else:
-        return "Other"
-    
-def get_token_info(w3, token_address):
-    token_contract = w3.eth.contract(address=w3.to_checksum_address(token_address), abi=ERC20_ABI)
-    return {
-        'symbol': token_contract.functions.symbol().call(),
-        'decimals': token_contract.functions.decimals().call()
-    }
     
 def truncate_address(address):
     return f"{address[:6]}...{address[-6:]}"
-
-def fetch_transactions(address, chain):
-    transactions = []
-    
-    if chain == "eth":
-        params = {
-            "module": "account",
-            "action": "txlist",
-            "address": address,
-            "startblock": 0,
-            "endblock": 99999999,
-            "page": 1,
-            "offset": 10,
-            "sort": "desc",
-            "apikey": ETHERSCAN_KEY
-        }
-        response = requests.get(ETHERSCAN_API, params=params)
-        data = response.json()
-        if data["status"] == "1":
-            transactions = data["result"]
-            
-    elif chain == "bsc":
-        params = {
-            "module": "account",
-            "action": "txlist",
-            "address": address,
-            "startblock": 0,
-            "endblock": 99999999,
-            "page": 1,
-            "offset": 10,
-            "sort": "desc",
-            "apikey": BSCSCAN_KEY
-        }
-        response = requests.get(BSCSCAN_API, params=params)
-        data = response.json()
-        if data["status"] == "1":
-            transactions = data["result"]
-            
-    elif chain == "sol":
-        params = {
-            "account": address,
-            "limit": 10
-        }
-        response = requests.get(SOLSCAN_API, params=params)
-        if response.status_code == 200:
-            transactions = response.json()
-            
-    return transactions
 
 def display_transactions(transactions, chain, wallet_address):
     table = Table(title=f"Latest 25 Token Transfer Events ({chain.upper()})")
@@ -317,7 +281,7 @@ def wallet_transaction_analysis():
                 index = Prompt.ask("Enter the number of the wallet to analyze", default="1")
                 if index.isdigit() and 1 <= int(index) <= len(favorite_wallets):
                     address = list(favorite_wallets.keys())[int(index) - 1]
-                    chain = favorite_wallets[address]
+                    chain = favorite_wallets[address]['chain']
                     analyze_wallet(address, chain)
                 else:
                     console.print("[bold red]Invalid wallet number.[/bold red]")
@@ -333,6 +297,7 @@ def wallet_transaction_analysis():
                     console.print("[bold red]Invalid wallet number.[/bold red]")
                     
         elif choice == "5":
+            clear_screen()
             break
         
 def analyze_wallet(address, chain):
@@ -365,9 +330,15 @@ def load_favorites():
             return json.load(f)
     return {}
 
+def update_last_scan_price(favorites, token_address, current_price):
+    if token_address in favorites:
+        favorites[token_address]['last_scan_price'] = current_price
+        favorites[token_address]['last_scan_time'] = datetime.now().isoformat()
+    save_favorites(favorites)
+    
 def save_favorites(favorites):
     with open(FAVORITES_FILE, 'w') as f:
-        json.dump(favorites, f)
+        json.dump(favorites, f, indent=2)
 
 def fetch_dexscreener_data(token_address):
     url = f"https://api.dexscreener.com/latest/dex/tokens/{token_address}"
@@ -398,8 +369,8 @@ def display_pair_info(pair_data):
     info_table.add_row("Pair", f"[cyan]{base_token}/{quote_token}[/cyan]")
     info_table.add_row("DEX", f"[magenta]{pair_data['dexId'].capitalize()}[/magenta]")
     info_table.add_row("Chain", f"[green]{pair_data['chainId'].capitalize()}[/green]")
-    info_table.add_row("Price (USD)", f"[yellow]${float(pair_data['priceUsd']):,.2f}[/yellow]")
-    info_table.add_row("Price (Native)", f"[yellow]{float(pair_data['priceNative']):,.2f} {quote_token}[/yellow]")
+    info_table.add_row("Price (USD)", f"[yellow]${float(pair_data['priceUsd']):,.9f}[/yellow]")
+    info_table.add_row("Price (Native)", f"[yellow]{float(pair_data['priceNative']):,.9f} {quote_token}[/yellow]")
     info_table.add_row("Pair Address", f"[blue]{pair_data['pairAddress']}[/blue]")
     info_table.add_row("DEX URL", f"[blue]{pair_data['url']}[/blue]")
     
@@ -443,10 +414,17 @@ def display_pair_info(pair_data):
         txns_table.add_row(timeframe, str(data['buys']), str(data['sells']))
     console.print(txns_table)
 
-def add_to_favorites(favorites, token_address, token_name):
-    favorites[token_address] = token_name
+def add_to_favorites(favorites, token_address, token_name, current_price):
+    favorites[token_address] = {
+        'name': token_name,
+        'last_scan_price': current_price,
+        'last_scan_time': datetime.now().isoformat(),
+        'last_scan_fdv': current_fdv
+        
+    }
     save_favorites(favorites)
     console.print(f"[bold green]Added {token_name} to favorites![/bold green]")
+    
 
 def remove_from_favorites(favorites, token_address):
     if token_address in favorites:
@@ -456,19 +434,32 @@ def remove_from_favorites(favorites, token_address):
     else:
         console.print("[bold red]Token not found in favorites.[/bold red]")
 
+
 def display_favorites(favorites):
     if not favorites:
         console.print("[yellow]No favorites saved yet.[/yellow]")
         return
-
+    
     table = Table(title="Favorite Tokens")
     table.add_column("#", style="cyan")
     table.add_column("Address", style="cyan")
     table.add_column("Name", style="magenta")
+    table.add_column("Last Scan Price", style="yellow")
+    table.add_column("Last Scan Time", style="green")
     
-    for i, (address, name) in enumerate(favorites.items(), 1):
-        table.add_row(str(i), address, name)
-    
+    for i, (address, data) in enumerate(favorites.items(), 1):
+        # Parse and format the last scan time
+        last_scan_time = datetime.fromisoformat(data['last_scan_time'])
+        formatted_time = last_scan_time.strftime("%b %d, %H:%M")
+        
+        table.add_row(
+            str(i),
+            address,
+            data['name'],
+            f"${data['last_scan_price']:.8f}",
+            formatted_time
+        )
+        
     console.print(table)
 
 def scan_favorite_token(token_address):
@@ -486,27 +477,56 @@ def scan_favorite_token(token_address):
     else:
         return None, None
 
-def display_favorite_token_summary(address, name, pair_data):
+
+def display_favorite_token_summary(favorites, address, data, pair_data):
     if pair_data:
+        current_price = float(pair_data['priceUsd'])
+        last_price = float(data['last_scan_price'])
+        price_change = ((current_price - last_price) / last_price) * 100
+        
+        # Parse the last scan time and format it
+        last_scan_time = datetime.fromisoformat(data['last_scan_time'])
+        formatted_time = last_scan_time.strftime("%b %d, %H:%M")
+        
         summary_table = Table(show_header=False, box=None)
-        summary_table.add_row("Name", f"[cyan]{name}[/cyan]")
+        summary_table.add_row("Name", f"[cyan]{data['name']}[/cyan]")
         summary_table.add_row("Address", f"[green]{address}[/green]")
-        summary_table.add_row("Price", f"[yellow]${float(pair_data['priceUsd']):,.6f}[/yellow]")
+        summary_table.add_row("Current Price", f"[yellow]${current_price:.9f}[/yellow]")
+        summary_table.add_row("Last Scan Price", f"[yellow]${last_price:.9f}[/yellow]")
+        summary_table.add_row("Last Scan Time", f"[blue]{formatted_time}[/blue]")
+        summary_table.add_row("Price Change", f"[{'green' if price_change >= 0 else 'red'}]{price_change:+.2f}%[/{'green' if price_change >= 0 else 'red'}]")
         summary_table.add_row("24h Change", f"[{'green' if float(pair_data['priceChange']['h24']) >= 0 else 'red'}]{float(pair_data['priceChange']['h24']):+.2f}%[/{'green' if float(pair_data['priceChange']['h24']) >= 0 else 'red'}]")
         summary_table.add_row("Liquidity", f"${float(pair_data['liquidity']['usd']):,.2f}")
         summary_table.add_row("24h Volume", f"${float(pair_data['volume']['h24']):,.2f}")
         summary_table.add_row("24h Transactions", f"Buys: {pair_data['txns']['h24']['buys']}, Sells: {pair_data['txns']['h24']['sells']}")
-        if 'fdv' in pair_data:
-            summary_table.add_row("Market Cap (FDV)", f"${float(pair_data['fdv']):,.2f}")
         
-        console.print(Panel(summary_table, title=f"Summary for {name}", expand=False))
+        if 'fdv' in pair_data:
+            current_fdv = float(pair_data['fdv'])
+            last_fdv = data.get('last_scan_fdv', current_fdv)  # Default to current if last_scan_fdv doesn't exist
+            fdv_change = current_fdv - last_fdv
+            fdv_color = 'green' if fdv_change >= 0 else 'red'
+            summary_table.add_row("Market Cap (FDV)", f"${current_fdv:,.2f} [{fdv_color}]({fdv_change:+,.2f})[/{fdv_color}]")
+            
+        console.print(Panel(summary_table, title=f"Summary for {data['name']}", expand=False))
+        
+        # Update the last scan price and FDV
+        update_last_scan_data(favorites, address, current_price, current_fdv if 'fdv' in pair_data else None)
     else:
-        console.print(f"[bold red]Failed to fetch data for {name}[/bold red]")
-
+        console.print(f"[bold red]Failed to fetch data for {data['name']}[/bold red]")
+        
+def update_last_scan_data(favorites, token_address, current_price, current_fdv=None):
+    if token_address in favorites:
+        favorites[token_address]['last_scan_price'] = current_price
+        favorites[token_address]['last_scan_time'] = datetime.now().isoformat()
+        if current_fdv is not None:
+            favorites[token_address]['last_scan_fdv'] = current_fdv
+    save_favorites(favorites)
+        
+        
 def scan_all_favorites(favorites):
-    for address, name in favorites.items():
+    for address, data in favorites.items():
         _, pair_data = scan_favorite_token(address)
-        display_favorite_token_summary(address, name, pair_data)
+        display_favorite_token_summary(favorites, address, data, pair_data)
 
 def fetch_top_cryptocurrencies():
     url = "https://api.coincap.io/v2/assets?limit=10"
@@ -558,13 +578,14 @@ def fetch_btc_eth_prices():
         return None, None
     
 def main():
-    display_ascii_art()
+    clear_screen()
     console.print("[bold green]Welcome to the Crypto Token Analyzer![/bold green]")
     console.print("This tool fetches and displays information about cryptocurrency tokens across various networks.")
     
     favorites = load_favorites()
     
     while True:
+        display_ascii_art()
         btc_price, eth_price = fetch_btc_eth_prices()
         if btc_price and eth_price:
             console.print(f"\n[bold yellow]BTC: ${btc_price:,.2f}[/bold yellow] | [bold yellow]ETH: ${eth_price:,.2f}[/bold yellow]")
@@ -573,43 +594,47 @@ def main():
             
         console.print("\n[bold cyan]Main Menu:[/bold cyan]")
         console.print("[bold white]1.[/bold white] [yellow]Analyze Token[/yellow]")
-        console.print("[bold white]2.[/bold white] [yellow]View favorites[/yellow]")
-        console.print("[bold white]3.[/bold white] [yellow]Scan all favorite tokens[/yellow]")
-        console.print("[bold white]4.[/bold white] [yellow]Analyze Wallets[/yellow]")
-        console.print("[bold white]5.[/bold white] [yellow]View Top 10 Cryptocurrencies[/yellow]")
+        console.print("[bold white]2.[/bold white] [yellow]Analyze Wallets[/yellow]")
+        console.print("[bold white]3.[/bold white] [yellow]View Favorites Token[/yellow]")
+        console.print("[bold white]4.[/bold white] [yellow]View Top 10 Cryptocurrencies[/yellow]")
+        console.print("[bold white]5.[/bold white] [yellow]View Ethereum Gas Prices[/yellow]")
         console.print("[bold white]6.[/bold white] [yellow]Exit[/yellow]")
         
         choice = Prompt.ask("[bold cyan]Enter your choice[/bold cyan]", choices=["1", "2", "3", "4", "5", "6"])
         
         if choice == "1":
-            token_address = Prompt.ask("\n[bold cyan]Enter the token address[/bold cyan]")
+                token_address = Prompt.ask("\n[bold cyan]Enter the token address[/bold cyan]")
             
-            with Progress() as progress:
-                task = progress.add_task("[green]Fetching data...", total=100)
-                
-                while not progress.finished:
-                    progress.update(task, advance=0.5)
-                    data = fetch_dexscreener_data(token_address)
-                    progress.update(task, completed=100)
+                with Progress() as progress:
+                    task = progress.add_task("[green]Fetching data...", total=100)
                     
-            if data and 'pairs' in data and data['pairs']:
-                pair_data = data['pairs'][0]
-                token_data = pair_data['baseToken']
-                
-                display_token_info(token_data, pair_data)
-                display_pair_info(pair_data)
-                
-                if token_address not in favorites:
-                    if Prompt.ask("[bold cyan]Add this token to favorites?[/bold cyan]", choices=["y", "n"], default="n") == "y":
-                        add_to_favorites(favorites, token_address, token_data['name'])
+                    while not progress.finished:
+                        progress.update(task, advance=0.5)
+                        data = fetch_dexscreener_data(token_address)
+                        progress.update(task, completed=100)
+                        
+                if data and 'pairs' in data and data['pairs']:
+                    pair_data = data['pairs'][0]
+                    token_data = pair_data['baseToken']
+                    current_price = float(pair_data['priceUsd'])
+                    
+                    display_token_info(token_data, pair_data)
+                    display_pair_info(pair_data)
+                    
+                    if token_address not in favorites:
+                        if Prompt.ask("[bold cyan]Add this token to favorites?[/bold cyan]", choices=["y", "n"], default="n") == "y":
+                            add_to_favorites(favorites, token_address, token_data['name'], current_price)
+                    else:
+                        if Prompt.ask("[bold cyan]Remove this token from favorites?[/bold cyan]", choices=["y", "n"], default="n") == "y":
+                            remove_from_favorites(favorites, token_address)
+                        else:
+                            update_last_scan_price(favorites, token_address, current_price)
                 else:
-                    if Prompt.ask("[bold cyan]Remove this token from favorites?[/bold cyan]", choices=["y", "n"], default="n") == "y":
-                        remove_from_favorites(favorites, token_address)
-            else:
-                console.print("[bold red]No data found for the given token address.[/bold red]")
-                console.print("[yellow]Please check the address and try again.[/yellow]")
+                    console.print("[bold red]No data found for the given token address.[/bold red]")
+                    console.print("[yellow]Please check the address and try again.[/yellow]")
                 
-        elif choice == "2":
+        elif choice == "3":
+            clear_screen()
             display_favorites(favorites)
             if favorites:
                 console.print("\n[bold cyan]Favorite Token Options:[/bold cyan]")
@@ -640,6 +665,8 @@ def main():
                         
                 elif fav_choice == "2":
                     scan_all_favorites(favorites)
+                    console.print("\nPress Enter to continue...")
+                    input()
                     
                 elif fav_choice == "3":
                     token_number = Prompt.ask("[bold cyan]Enter the number of the favorite token to remove[/bold cyan]")
@@ -660,15 +687,21 @@ def main():
                         console.print("[bold yellow]All favorites have been removed.[/bold yellow]")
                         
                 elif fav_choice == "5":
+                    clear_screen()
                     pass  # Return to main menu
-                    
-        elif choice == "3":
-            scan_all_favorites(favorites)
-        elif choice == "4":
+
+        elif choice == "2":
+            clear_screen()
             wallet_transaction_analysis()
-        elif choice == "5":
+        elif choice == "4":
+            clear_screen()
             console.print("\n[bold cyan]Top 10 Cryptocurrencies by Market Cap:[/bold cyan]")
             display_top_cryptocurrencies()
+            input("\nPress Enter to return to the main menu...")
+        elif choice == "5":
+            clear_screen()
+            console.print("\n[bold cyan]Ethereum Gas Prices:[/bold cyan]")
+            display_eth_gas_prices()
             input("\nPress Enter to return to the main menu...")
         elif choice == "6":
             break
