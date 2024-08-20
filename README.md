@@ -19,7 +19,11 @@ The Crypto Token Analyzer is a powerful command-line tool designed to fetch and 
 - **Wallet Analysis**: Track and analyze cryptocurrency wallets across different blockchains (Ethereum, Binance Smart Chain).
 - **Top Cryptocurrencies**: View the top 10 cryptocurrencies by market cap with real-time data.
 - **Real-time BTC and ETH Prices**: Display current Bitcoin and Ethereum prices in the main menu.
+- **Ethereum Gas Prices**: Fetch and display real-time Ethereum gas prices, including low, standard, and fast gas prices, with estimated transaction times.
 - **Multi-chain Support**: Supports Ethereum, Binance Smart Chain, and Solana networks.
+
+
+This update reflects the new Ethereum gas price tracking feature you added. Let me know if there's anything else you'd like to modify!
 
 ## Installation
 
