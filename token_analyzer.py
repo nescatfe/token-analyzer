@@ -22,15 +22,15 @@ with open('router_abi.json') as f:
     ROUTER_ABI = json.load(f)
     
 console = Console()
-ETH_PROVIDER = "https://mainnet.infura.io/v3/45381de71c6346e19c99ef310a373fae"
+ETH_PROVIDER = "https://mainnet.infura.io/v3/YOUR_INFURA_PROJECT_ID"
 BSC_PROVIDER = "https://bsc-dataseed.binance.org/"
 UNISWAP_ROUTER = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D"
 PANCAKESWAP_ROUTER = "0x10ED43C718714eb63d5aA57B78B54704E256024E"
 ETHERSCAN_API = "https://api.etherscan.io/api"
 BSCSCAN_API = "https://api.bscscan.com/api"
 SOLSCAN_API = "https://public-api.solscan.io/account/transactions"
-ETHERSCAN_KEY = "5WPKZ6GNAP59ZNRGPSET52YR2KZ3IIP7XQ"
-BSCSCAN_KEY = "JGKS2YGKNN28NBI9K521PZC48GN5TFJHU9"
+ETHERSCAN_KEY = "YOUR_ETHERSCAN_API_KEY"
+BSCSCAN_KEY = "YOUR_BSCSCAN_API_KEY"
 FAVORITES_FILE = "favorite_tokens.json"
 WALLET_FAVORITES_FILE = "favorite_wallets.json"
 
