@@ -10,20 +10,61 @@
 
 ## Description
 
-The Crypto Token Analyzer is a powerful command-line tool designed to fetch and display information about cryptocurrency tokens across various networks. It provides real-time data analysis, wallet tracking, and market insights for crypto enthusiasts, traders, and researchers.
 
-## Features
+# Crypto Token Analyzer
 
-- **Token Analysis**: Analyze any token by its contract address, providing detailed information about price, liquidity, volume, and more.
-- **Favorite Tokens**: Save and manage a list of favorite tokens for quick access and monitoring.
-- **Wallet Analysis**: Track and analyze cryptocurrency wallets across different blockchains (Ethereum, Binance Smart Chain).
-- **Top Cryptocurrencies**: View the top 10 cryptocurrencies by market cap with real-time data.
-- **Real-time BTC and ETH Prices**: Display current Bitcoin and Ethereum prices in the main menu.
-- **Ethereum Gas Prices**: Fetch and display real-time Ethereum gas prices, including low, standard, and fast gas prices, with estimated transaction times.
-- **Multi-chain Support**: Supports Ethereum, Binance Smart Chain, and Solana networks.
+The Crypto Token Analyzer is a command-line interface (CLI) application written in Python. It utilizes various APIs and web3 libraries to fetch and display real-time information about cryptocurrencies, tokens, and blockchain wallets. The application is designed with a user-friendly interface using the Rich library for enhanced console output.
 
+## Key Features:
 
-This update reflects the new Ethereum gas price tracking feature you added. Let me know if there's anything else you'd like to modify!
+### 1. Token Analysis:
+- Fetch and display detailed information about any token using its address
+- Show token price, liquidity, volume, and price changes
+- Display top token holders and their shares
+
+### 2. Wallet Analysis:
+- Analyze wallet transactions across different blockchains (Ethereum, BSC)
+- View token transfer events for a given wallet
+- Display detailed transaction information
+
+### 3. Favorites Management:
+- Add tokens to a favorites list for quick access
+- View and manage favorite tokens
+- Scan all favorite tokens to see price changes and updates
+
+### 4. Top Cryptocurrencies:
+- Display the top 10 cryptocurrencies by market cap
+- Show price changes and market cap information
+
+### 5. Ethereum Gas Prices:
+- Fetch and display current Ethereum gas prices
+- Show estimated transaction costs for different types of operations
+
+### 6. Meme Token Search:
+- Search for meme tokens using keywords
+- Display search results with key metrics
+- Analyze selected meme tokens in detail
+
+### 7. Multi-chain Support:
+- Support for multiple blockchains including Ethereum, Binance Smart Chain, and Polygon
+
+### 8. Real-time Data:
+- Fetch real-time price data for Bitcoin and Ethereum
+- Use various APIs (DexScreener, CoinGecko, CoinCap) for up-to-date information
+
+### 9. Transaction Decoding:
+- Decode and interpret common transaction types (swaps, transfers, approvals)
+
+### 10. User-friendly Interface:
+- Clear menu structure for easy navigation
+- Colorful and formatted output using Rich library
+- Progress bars for data fetching operations
+
+### 11. Persistent Storage:
+- Save favorite tokens and wallets for future sessions
+- Track price changes between scans
+
+This application serves as a powerful tool for cryptocurrency enthusiasts, traders, and analysts to quickly gather and analyze information about various tokens, track their favorites, and stay updated on market trends. The modular structure of the code allows for easy expansion and addition of new features in the future.
 
 ## Installation
 
